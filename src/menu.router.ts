@@ -1,4 +1,6 @@
+import { RequestOptions } from '@crawlee/core/request'
 import { CheerioCrawlingContext, RouterHandler } from 'crawlee'
+import { createRandomUniqueKey } from './utils.js'
 
 interface MenuResponse {
   id: number
@@ -26,8 +28,7 @@ const extractSubareaIds = (entries: Array<MenuResponse>, acc: Array<SubareaId>):
 
 export const registerMenuRoute = (routerRef: RouterHandler<CheerioCrawlingContext>) => {
 
-  routerRef.addHandler('menu', async ({ body, enqueueLinks }) => {
-
+  routerRef.addHandler('menu', async ({ body, crawler, log }) => {
     if (!(body instanceof Buffer)) {
       throw new Error('Expected for `body` to be a Buffer.')
     }
@@ -37,18 +38,20 @@ export const registerMenuRoute = (routerRef: RouterHandler<CheerioCrawlingContex
     const subareaIdsAcc: Array<SubareaId> = []
     extractSubareaIds(menuResponse, subareaIdsAcc)
 
-    const promises = subareaIdsAcc.slice(0, 5).map(({ id, name }) => {
-      console.log('constructed', id)
-      return enqueueLinks({
-        urls: [`https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/RegistarServlet?subareaid=${id}`],
+    const requests = subareaIdsAcc.slice(0, 100).map(({ id, name }): RequestOptions => {
+      return {
+        url: `https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/RegistarServlet?subareaid=${id}`,
         userData: {
           title: name,
         },
         label: 'subarea',
-      })
+        uniqueKey: createRandomUniqueKey('subarea', id),
+      }
     })
 
-    await Promise.all(promises)
+    log.info(`Added ${requests.length} "subarea" requests.`)
+
+    await crawler.addRequests(requests)
 
   })
 
