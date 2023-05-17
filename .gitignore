@@ -1,8 +1,5 @@
-# This file tells Git which files shouldn't be added to source control
-
+.vscode
 .idea
-dist
-node_modules
-apify_storage
-crawlee_storage
-storage
+
+OUTPUT
+.internal
