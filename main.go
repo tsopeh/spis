@@ -1,10 +1,19 @@
 package main
 
+import (
+	"os"
+	"path/filepath"
+)
+
 // TODO: Show progress for fetching and processing HTML and PDF documents.
 // TODO: Capture stdout for OCR
 // TODO: Experiment with goroutines to make thing more concurrent (execute faster).
 
+var outputDirPath = filepath.Join("./", "OUTPUT", "run06")
+
 func main() {
+
+	check(os.MkdirAll(outputDirPath, os.ModePerm))
 
 	htmlLegislationCollector := *createHtmlLegislationCollector()
 	pdfLegislationCollector := *createPdfLegislationCollector()

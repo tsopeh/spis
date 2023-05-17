@@ -3,22 +3,25 @@ package main
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"github.com/gocolly/colly/v2"
 	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
-
-	"github.com/gocolly/colly/v2"
+	"time"
 )
 
 func createHtmlLegislationCollector() *colly.Collector {
 	byteOrderMarkReg := regexp.MustCompile("\uFEFF")
 	nbspReg := regexp.MustCompile("[\u202F\u00A0]")
 	multipleWhitespacesAndNewlines := regexp.MustCompile(`(\s*\n+(?:\n*|\s*)\n+\s*)`)
+
 	c := colly.NewCollector(
-		colly.MaxRequests(3),
+		colly.Async(),
 	)
+	c.SetRequestTimeout(time.Duration(60) * time.Second)
+	c.Limit(&colly.LimitRule{Delay: 50 * time.Millisecond, RandomDelay: 50 * time.Millisecond, Parallelism: 8, DomainGlob: "*"})
 
 	c.OnHTML(`html`, func(h *colly.HTMLElement) {
 		var contentEl = h.DOM.Find("#actContentPrimaryScroll")
@@ -44,9 +47,6 @@ func createHtmlLegislationCollector() *colly.Collector {
 		sanitizedName = sanitizedName + "---" + "HTML" + "---" + hashString + ".txt"
 
 		log.Println(sanitizedName)
-
-		var outputDirPath = filepath.Join("./", "OUTPUT")
-		check(os.MkdirAll(outputDirPath, os.ModePerm))
 		outputFilePath := filepath.Join(outputDirPath, sanitizedName)
 		f, err := os.OpenFile(outputFilePath, os.O_WRONLY|os.O_CREATE, 0600)
 		check(err)

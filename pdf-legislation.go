@@ -10,13 +10,18 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/gen2brain/go-fitz"
 	"github.com/otiai10/gosseract/v2"
 )
 
 func createPdfLegislationCollector() *colly.Collector {
-	c := colly.NewCollector()
+	c := colly.NewCollector(
+		colly.Async(),
+	)
+	c.SetRequestTimeout(time.Duration(60) * time.Second)
+	c.Limit(&colly.LimitRule{Delay: 50 * time.Millisecond, RandomDelay: 50 * time.Millisecond, Parallelism: 1, DomainGlob: "*"})
 
 	// Example of the request headers needed to fetch a PDF.
 	// curl 'https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/viewdoc?regactid=413504&doctype=reg&findpdfurl=true'   -H 'X-Referer: /SlGlasnikPortal/pdfjs/build/pdf.worker.js'   -H 'Referer: https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/pdfjs/build/pdf.worker.js'   -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36'   --compressed --output - > test.pdf
@@ -25,18 +30,16 @@ func createPdfLegislationCollector() *colly.Collector {
 		request.Headers.Add("Referer", "https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/pdfjs/build/pdf.worker.js")
 		request.Headers.Add("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36")
 		request.Headers.Add("Accept-Encoding", "compressed")
-		log.Println(request.URL.String())
-		log.Println(request.Headers)
 	})
 
 	c.OnResponse(func(response *colly.Response) {
-		processPdfWithOcr(response.Body)
+		processPdfWithOcr(response.Body, response.Request.URL.String())
 	})
 
 	return c
 }
 
-func processPdfWithOcr(pdfBuffer []byte) {
+func processPdfWithOcr(pdfBuffer []byte, debugUrl string) {
 
 	doc, err := fitz.NewFromMemory(pdfBuffer)
 	check(err)
@@ -56,8 +59,8 @@ func processPdfWithOcr(pdfBuffer []byte) {
 	var hashString = hex.EncodeToString(hash[:])
 	sanitizedName = sanitizedName + "---" + "PDF" + "---" + hashString + ".txt"
 
-	var outputDirPath = filepath.Join("./", "OUTPUT")
-	check(os.MkdirAll(outputDirPath, os.ModePerm))
+	log.Println(sanitizedName, debugUrl)
+
 	outputFilePath := filepath.Join(outputDirPath, sanitizedName)
 
 	f, err := os.Create(outputFilePath)
