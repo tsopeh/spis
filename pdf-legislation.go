@@ -18,6 +18,8 @@ import (
 func createPdfLegislationCollector() *colly.Collector {
 	c := colly.NewCollector()
 
+	// Example of the request headers needed to fetch a PDF.
+	// curl 'https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/viewdoc?regactid=413504&doctype=reg&findpdfurl=true'   -H 'X-Referer: /SlGlasnikPortal/pdfjs/build/pdf.worker.js'   -H 'Referer: https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/pdfjs/build/pdf.worker.js'   -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36'   --compressed --output - > test.pdf
 	c.OnRequest(func(request *colly.Request) {
 		request.Headers.Add("X-Referer", "/SlGlasnikPortal/pdfjs/build/pdf.worker.js")
 		request.Headers.Add("Referer", "https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/pdfjs/build/pdf.worker.js")
@@ -69,9 +71,7 @@ func processPdfWithOcr(pdfBuffer []byte) {
 		// Page seg mode: 0=osd only, 1=auto+osd, 2=auto, 3=col, 4=block," " 5=line, 6=word, 7=char
 		check(client.SetVariable("tessedit_pageseg_mode", "1"))
 		img, err := doc.Image(n)
-		if err != nil {
-			panic(err)
-		}
+		check(err)
 
 		buf := new(bytes.Buffer)
 		if err := png.Encode(buf, img); err != nil {
@@ -82,9 +82,7 @@ func processPdfWithOcr(pdfBuffer []byte) {
 			panic(err)
 		}
 		text, err := client.Text()
-		if err != nil {
-			panic(err)
-		}
+		check(err)
 
 		if _, err = w.WriteString(text); err != nil {
 			panic(err)
