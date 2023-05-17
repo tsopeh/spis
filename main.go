@@ -2,17 +2,20 @@ package main
 
 func main() {
 
-	legislationDocumentCollector := *createHtmlDocumentCollector()
-	legislationUrlCollector := *createLegislationUrlCollector(&legislationDocumentCollector)
+	htmlLegislationCollector := *createHtmlLegislationCollector()
+	pdfLegislationCollector := *createPdfLegislationCollector()
+	legislationUrlCollector := *createLegislationUrlCollector(&htmlLegislationCollector, &pdfLegislationCollector)
 	menuCollector := *createMenuCollector(&legislationUrlCollector)
 
 	menuCollector.Visit("https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/api/reg/menu")
 
+	// Test PDF & OCR
+	//legislationUrlCollector.Visit("https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/RegistarServlet?subareaid=545")
+
 	menuCollector.Wait()
 	legislationUrlCollector.Wait()
-	legislationDocumentCollector.Wait()
-
-	//ocrHelloWorld()
+	pdfLegislationCollector.Wait()
+	htmlLegislationCollector.Wait()
 
 }
 

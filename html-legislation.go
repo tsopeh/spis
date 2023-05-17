@@ -12,7 +12,7 @@ import (
 	"github.com/gocolly/colly/v2"
 )
 
-func createHtmlDocumentCollector() *colly.Collector {
+func createHtmlLegislationCollector() *colly.Collector {
 	byteOrderMarkReg := regexp.MustCompile("\uFEFF")
 	nbspReg := regexp.MustCompile("[\u202F\u00A0]")
 	multipleWhitespacesAndNewlines := regexp.MustCompile(`(\s*\n+(?:\n*|\s*)\n+\s*)`)
@@ -35,19 +35,19 @@ func createHtmlDocumentCollector() *colly.Collector {
 		var pageTitle = h.DOM.Find("title").Text()
 
 		var hash = md5.Sum([]byte(text))
-		var sanitazedName = colly.SanitizeFileName(pageTitle)
+		var sanitizedName = colly.SanitizeFileName(pageTitle)
 		var fileNameMaxLength = 20
-		if len(sanitazedName) > fileNameMaxLength {
-			sanitazedName = sanitazedName[:fileNameMaxLength]
+		if len(sanitizedName) > fileNameMaxLength {
+			sanitizedName = sanitizedName[:fileNameMaxLength]
 		}
 		var hashString = hex.EncodeToString(hash[:])
-		sanitazedName = sanitazedName + "---" + hashString + ".txt"
+		sanitizedName = sanitizedName + "---" + "HTML" + "---" + hashString + ".txt"
 
-		log.Println(sanitazedName)
+		log.Println(sanitizedName)
 
 		var outputDirPath = filepath.Join("./", "OUTPUT")
 		check(os.MkdirAll(outputDirPath, os.ModePerm))
-		outputFilePath := filepath.Join(outputDirPath, sanitazedName)
+		outputFilePath := filepath.Join(outputDirPath, sanitizedName)
 		f, err := os.OpenFile(outputFilePath, os.O_WRONLY|os.O_CREATE, 0600)
 		check(err)
 		defer func() { check(f.Close()) }()
@@ -57,7 +57,7 @@ func createHtmlDocumentCollector() *colly.Collector {
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
-		log.Println("Error in `createHtmlDocumentCollector`: ", err)
+		log.Println("Error in `createHtmlLegislationCollector`: ", err)
 	})
 
 	return c
