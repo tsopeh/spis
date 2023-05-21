@@ -23,7 +23,10 @@ func main() {
 	//menuCollector.Visit("https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/api/reg/menu")
 
 	// Test PDF & OCR
-	legislationUrlCollector.Visit("https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/RegistarServlet?subareaid=545")
+	// Short PDF
+	//pdfLegislationCollector.Visit("https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/viewdoc?regactid=413516&doctype=reg&findpdfurl=true")
+	// Long PDF
+	pdfLegislationCollector.Visit("https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/viewdoc?regactid=413518&doctype=reg&findpdfurl=true")
 
 	menuCollector.Wait()
 	legislationUrlCollector.Wait()
