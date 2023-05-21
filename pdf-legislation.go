@@ -57,10 +57,10 @@ func processPdfWithOcr(pdfBuffer []byte, debugUrl string) {
 
 	result := make([]string, doc.NumPage())
 	poolSize := int(math.Max(1, math.Ceil(0.7*float64(runtime.NumCPU()))))
-	runJob, wait := createLimitedWaitGroup(poolSize)
+	wg := CreateSemaphoredWaitGroup(poolSize)
 
 	for i := 0; i < doc.NumPage(); i++ {
-		runJob(func(pageIndex int) func() {
+		wg.AddJob(func(pageIndex int) func() {
 			return func() {
 				client := gosseract.NewClient()
 				defer func() { check(client.Close()) }()
@@ -82,7 +82,7 @@ func processPdfWithOcr(pdfBuffer []byte, debugUrl string) {
 			}
 		}(i))
 	}
-	wait()
+	wg.WaitAll()
 	f, err := os.Create(outputFilePath)
 	check(err)
 	defer func() { check(f.Close()) }()

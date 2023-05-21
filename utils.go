@@ -6,20 +6,23 @@ func check(e error) {
 	}
 }
 
-func createLimitedWaitGroup(maxParallelJobsCount int) (func(func()), func()) {
+type SemaphoredWaitGroup struct {
+	AddJob  func(func())
+	WaitAll func()
+}
+
+func CreateSemaphoredWaitGroup(maxParallelJobsCount int) SemaphoredWaitGroup {
 	c := make(chan struct{}, maxParallelJobsCount)
-
-	runJob := func(job func()) {
-		c <- struct{}{}
-		go func() {
-			job()
-			<-c
-		}()
+	return SemaphoredWaitGroup{
+		AddJob: func(job func()) {
+			c <- struct{}{}
+			go func() {
+				job()
+				<-c
+			}()
+		},
+		WaitAll: func() {
+			close(c)
+		},
 	}
-
-	wait := func() {
-		close(c)
-	}
-
-	return runJob, wait
 }
