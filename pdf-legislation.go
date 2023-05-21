@@ -60,27 +60,27 @@ func processPdfWithOcr(pdfBuffer []byte, debugUrl string) {
 	wg := CreateSemaphoredWaitGroup(poolSize)
 
 	for i := 0; i < doc.NumPage(); i++ {
-		wg.AddJob(func(pageIndex int) func() {
-			return func() {
-				client := gosseract.NewClient()
-				defer func() { check(client.Close()) }()
-				client.Languages = []string{"srp", "srp_latn", "eng"}
-				// Page seg mode: 0=osd only, 1=auto+osd, 2=auto, 3=col, 4=block," " 5=line, 6=word, 7=char
-				check(client.SetVariable("tessedit_pageseg_mode", "1"))
-				img, err := doc.Image(pageIndex)
-				buf := new(bytes.Buffer)
-				if err := png.Encode(buf, img); err != nil {
-					panic(err)
-				}
-
-				if err := client.SetImageFromBytes(buf.Bytes()); err != nil {
-					panic(err)
-				}
-				text, err := client.Text()
-				check(err)
-				result[pageIndex] = text
+		// scoped variable
+		pageIndex := i
+		wg.AddJob(func() {
+			client := gosseract.NewClient()
+			defer func() { check(client.Close()) }()
+			client.Languages = []string{"srp", "srp_latn", "eng"}
+			// Page seg mode: 0=osd only, 1=auto+osd, 2=auto, 3=col, 4=block," " 5=line, 6=word, 7=char
+			check(client.SetVariable("tessedit_pageseg_mode", "1"))
+			img, err := doc.Image(pageIndex)
+			buf := new(bytes.Buffer)
+			if err := png.Encode(buf, img); err != nil {
+				panic(err)
 			}
-		}(i))
+
+			if err := client.SetImageFromBytes(buf.Bytes()); err != nil {
+				panic(err)
+			}
+			text, err := client.Text()
+			check(err)
+			result[pageIndex] = text
+		})
 	}
 	wg.WaitAll()
 	f, err := os.Create(outputFilePath)
