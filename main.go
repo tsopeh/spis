@@ -9,7 +9,7 @@ import (
 // TODO: Capture stdout for OCR
 // TODO: Experiment with goroutines to make thing more concurrent (execute faster).
 
-var outputDirPath = filepath.Join("./", "OUTPUT", "run06")
+var outputDirPath = filepath.Join("./", "OUTPUT", "run01")
 
 func main() {
 
@@ -24,9 +24,9 @@ func main() {
 
 	// Test PDF & OCR
 	// Short PDF
-	//pdfLegislationCollector.Visit("https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/viewdoc?regactid=413516&doctype=reg&findpdfurl=true")
+	pdfLegislationCollector.Visit("https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/viewdoc?regactid=413516&doctype=reg&findpdfurl=true")
 	// Long PDF
-	pdfLegislationCollector.Visit("https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/viewdoc?regactid=413518&doctype=reg&findpdfurl=true")
+	//pdfLegislationCollector.Visit("https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/viewdoc?regactid=413518&doctype=reg&findpdfurl=true")
 
 	menuCollector.Wait()
 	legislationUrlCollector.Wait()

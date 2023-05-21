@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
@@ -56,47 +55,43 @@ func processPdfWithOcr(pdfBuffer []byte, debugUrl string) {
 
 	outputFilePath := filepath.Join(outputDirPath, sanitizedName)
 
+	result := make([]string, doc.NumPage())
+	poolSize := int(math.Max(1, math.Ceil(0.7*float64(runtime.NumCPU()))))
+	runJob, wait := createLimitedWaitGroup(poolSize)
+
+	for i := 0; i < doc.NumPage(); i++ {
+		runJob(func(pageIndex int) func() {
+			return func() {
+				client := gosseract.NewClient()
+				defer func() { check(client.Close()) }()
+				client.Languages = []string{"srp", "srp_latn", "eng"}
+				// Page seg mode: 0=osd only, 1=auto+osd, 2=auto, 3=col, 4=block," " 5=line, 6=word, 7=char
+				check(client.SetVariable("tessedit_pageseg_mode", "1"))
+				img, err := doc.Image(pageIndex)
+				buf := new(bytes.Buffer)
+				if err := png.Encode(buf, img); err != nil {
+					panic(err)
+				}
+
+				if err := client.SetImageFromBytes(buf.Bytes()); err != nil {
+					panic(err)
+				}
+				text, err := client.Text()
+				check(err)
+				result[pageIndex] = text
+			}
+		}(i))
+	}
+	wait()
 	f, err := os.Create(outputFilePath)
 	check(err)
 	defer func() { check(f.Close()) }()
-
-	w := bufio.NewWriter(f)
-	check(err)
-
-	result := make([]string, doc.NumPage())
-	poolSize := int(math.Max(1, math.Ceil(0.7*float64(runtime.NumCPU()))))
-	sem := make(chan struct{}, poolSize)
-
-	for i := 0; i < doc.NumPage(); i++ {
-		sem <- struct{}{}
-		go func(pageIndex int) {
-			log.Println(pageIndex)
-			client := gosseract.NewClient()
-			defer func() { check(client.Close()) }()
-			client.Languages = []string{"srp", "srp_latn", "eng"}
-			// Page seg mode: 0=osd only, 1=auto+osd, 2=auto, 3=col, 4=block," " 5=line, 6=word, 7=char
-			check(client.SetVariable("tessedit_pageseg_mode", "1"))
-			img, err := doc.Image(pageIndex)
-
-			buf := new(bytes.Buffer)
-			if err := png.Encode(buf, img); err != nil {
-				panic(err)
-			}
-
-			if err := client.SetImageFromBytes(buf.Bytes()); err != nil {
-				panic(err)
-			}
-			text, err := client.Text()
-			check(err)
-
-			result[pageIndex] = text
-			<-sem
-		}(i)
-
-	}
-	if _, err = w.WriteString(strings.Join(result, "")); err != nil {
+	if _, err := f.WriteString(strings.Join(result, "")); err != nil {
 		panic(err)
 	}
-	check(w.Flush())
 
 }
+
+//func ocrFromFitzDocument(doc *fitz.Document) <-chan string {
+//	textChan := make(chan string)
+//}
