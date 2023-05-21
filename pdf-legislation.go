@@ -73,7 +73,6 @@ func processPdfWithOcr(pdfBuffer []byte, debugUrl string) {
 			if err := png.Encode(buf, img); err != nil {
 				panic(err)
 			}
-
 			if err := client.SetImageFromBytes(buf.Bytes()); err != nil {
 				panic(err)
 			}

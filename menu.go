@@ -38,8 +38,7 @@ func createMenuCollector(documentCollector *colly.Collector) *colly.Collector {
 		}
 		urls := []string{}
 		menuResponseToUrls(&menuItems, &urls)
-		// log.Println(strings.Join(urls, "\n"))
-		log.Println("Succesfully retrieved the menu items.")
+		log.Println("Succesfully retrieved the list of " + strconv.Itoa(len(urls)) + " menu items.")
 		for _, url := range urls {
 			documentCollector.Visit(url)
 		}

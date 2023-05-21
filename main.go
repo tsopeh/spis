@@ -9,7 +9,7 @@ import (
 // TODO: Capture stdout for OCR
 // TODO: Experiment with goroutines to make thing more concurrent (execute faster).
 
-var outputDirPath = filepath.Join("./", "OUTPUT", "run03")
+var outputDirPath = filepath.Join("./", "OUTPUT", "run01")
 
 func main() {
 
