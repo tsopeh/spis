@@ -29,7 +29,7 @@ func menuResponseToUrls(items *[]MenuItem) []string {
 	return acc
 }
 
-func createMenuCollector(documentCollector *colly.Collector) *colly.Collector {
+func fetchMenuUrls(menuUrl string, urls *[]string) {
 	c := colly.NewCollector()
 
 	c.OnResponse(func(r *colly.Response) {
@@ -38,16 +38,13 @@ func createMenuCollector(documentCollector *colly.Collector) *colly.Collector {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		urls := menuResponseToUrls(&menuItems)
-		log.Println("Successfully retrieved the list of " + strconv.Itoa(len(urls)) + " menu items.")
-		for _, url := range urls {
-			documentCollector.Visit(url)
-		}
+		resultUrls := menuResponseToUrls(&menuItems)
+		*urls = resultUrls
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
-		log.Println("Error in `createMenuCollector` for URL", r.Request.URL.String(), err)
+		log.Println("Error in `fetchMenuUrls` for URL", r.Request.URL.String(), err)
 	})
 
-	return c
+	c.Visit(menuUrl)
 }

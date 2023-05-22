@@ -12,7 +12,9 @@ import (
 	"time"
 )
 
-func createHtmlLegislationCollector() *colly.Collector {
+func createHtmlLegislationCollector(
+	documentsDirPath string,
+) *colly.Collector {
 	byteOrderMarkReg := regexp.MustCompile("\uFEFF")
 	nbspReg := regexp.MustCompile("[\u202F\u00A0]")
 	multipleWhitespacesAndNewlines := regexp.MustCompile(`(\s*\n+(?:\n*|\s*)\n+\s*)`)
@@ -47,7 +49,7 @@ func createHtmlLegislationCollector() *colly.Collector {
 		sanitizedName = sanitizedName + "---" + "HTML" + "---" + hashString + ".txt"
 
 		log.Println("Name", sanitizedName, "URL", h.Request.URL.String())
-		outputFilePath := filepath.Join(outputDirPath, sanitizedName)
+		outputFilePath := filepath.Join(documentsDirPath, sanitizedName)
 		f, err := os.OpenFile(outputFilePath, os.O_WRONLY|os.O_CREATE, 0600)
 		check(err)
 		defer func() { check(f.Close()) }()

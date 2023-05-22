@@ -16,7 +16,9 @@ import (
 	"strings"
 )
 
-func createPdfLegislationCollector() *colly.Collector {
+func createPdfLegislationCollector(
+	documentsDirPath string,
+) *colly.Collector {
 	c := colly.NewCollector()
 
 	// Example of the request headers needed to fetch a PDF.
@@ -29,13 +31,17 @@ func createPdfLegislationCollector() *colly.Collector {
 	})
 
 	c.OnResponse(func(response *colly.Response) {
-		processPdfWithOcr(response.Body, response.Request.URL.String())
+		processPdfWithOcr(response.Body, documentsDirPath, response.Request.URL.String())
 	})
 
 	return c
 }
 
-func processPdfWithOcr(pdfBuffer []byte, debugUrl string) {
+func processPdfWithOcr(
+	pdfBuffer []byte,
+	documentsDirPath string,
+	debugUrl string,
+) {
 	doc, err := fitz.NewFromMemory(pdfBuffer)
 	check(err)
 	defer func() { check(doc.Close()) }()
@@ -81,7 +87,7 @@ func processPdfWithOcr(pdfBuffer []byte, debugUrl string) {
 		})
 	}
 	wg.WaitAll()
-	outputFilePath := filepath.Join(outputDirPath, sanitizedName)
+	outputFilePath := filepath.Join(documentsDirPath, sanitizedName)
 	f, err := os.Create(outputFilePath)
 	check(err)
 	defer func() { check(f.Close()) }()
