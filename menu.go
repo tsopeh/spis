@@ -17,14 +17,16 @@ type MenuItem struct {
 	Children []MenuItem `json:"children"`
 }
 
-func menuResponseToUrls(items *[]MenuItem, acc *[]string) {
+func menuResponseToUrls(items *[]MenuItem) []string {
+	acc := []string{}
 	for _, item := range *items {
-		if len(item.Children) == 0 {
-			*acc = append(*acc, "https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/RegistarServlet?subareaid="+strconv.Itoa(item.ID))
-			return
+		if item.Children == nil || len(item.Children) == 0 {
+			acc = append(acc, "https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/RegistarServlet?subareaid="+strconv.Itoa(item.ID))
+		} else {
+			acc = append(acc, menuResponseToUrls(&item.Children)...)
 		}
-		menuResponseToUrls(&item.Children, acc)
 	}
+	return acc
 }
 
 func createMenuCollector(documentCollector *colly.Collector) *colly.Collector {
@@ -36,16 +38,15 @@ func createMenuCollector(documentCollector *colly.Collector) *colly.Collector {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		urls := []string{}
-		menuResponseToUrls(&menuItems, &urls)
-		log.Println("Succesfully retrieved the list of " + strconv.Itoa(len(urls)) + " menu items.")
+		urls := menuResponseToUrls(&menuItems)
+		log.Println("Successfully retrieved the list of " + strconv.Itoa(len(urls)) + " menu items.")
 		for _, url := range urls {
 			documentCollector.Visit(url)
 		}
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
-		log.Println("Error in `createMenuCollector`: ", err)
+		log.Println("Error in `createMenuCollector` for URL", r.Request.URL.String(), err)
 	})
 
 	return c

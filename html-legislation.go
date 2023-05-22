@@ -46,7 +46,7 @@ func createHtmlLegislationCollector() *colly.Collector {
 		var hashString = hex.EncodeToString(hash[:])
 		sanitizedName = sanitizedName + "---" + "HTML" + "---" + hashString + ".txt"
 
-		log.Println(sanitizedName)
+		log.Println("Name", sanitizedName, "URL", h.Request.URL.String())
 		outputFilePath := filepath.Join(outputDirPath, sanitizedName)
 		f, err := os.OpenFile(outputFilePath, os.O_WRONLY|os.O_CREATE, 0600)
 		check(err)
@@ -57,7 +57,7 @@ func createHtmlLegislationCollector() *colly.Collector {
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
-		log.Println("Error in `createHtmlLegislationCollector`: ", err)
+		log.Println("Error in `createHtmlLegislationCollector` for URL", r.Request.URL.String(), err)
 	})
 
 	return c

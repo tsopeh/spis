@@ -33,7 +33,7 @@ func createLegislationUrlCollector(
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
-		log.Println("Error in `createLegislationUrlCollector`: ", err)
+		log.Println("Error in `createLegislationUrlCollector` for URL", r.Request.URL.String(), err)
 	})
 
 	return c

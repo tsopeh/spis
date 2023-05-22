@@ -36,7 +36,6 @@ func createPdfLegislationCollector() *colly.Collector {
 }
 
 func processPdfWithOcr(pdfBuffer []byte, debugUrl string) {
-
 	doc, err := fitz.NewFromMemory(pdfBuffer)
 	check(err)
 	defer func() { check(doc.Close()) }()
@@ -51,18 +50,17 @@ func processPdfWithOcr(pdfBuffer []byte, debugUrl string) {
 	var hashString = hex.EncodeToString(hash[:])
 	sanitizedName = sanitizedName + "---" + "PDF" + "---" + hashString + ".txt"
 
-	log.Println(sanitizedName, debugUrl)
-
-	outputFilePath := filepath.Join(outputDirPath, sanitizedName)
-
 	result := make([]string, doc.NumPage())
 	poolSize := int(math.Max(1, math.Ceil(0.7*float64(runtime.NumCPU()))))
 	wg := CreateSemaphoredWaitGroup(poolSize)
 
+	log.Println("Name", sanitizedName, "URL", debugUrl)
 	for i := 0; i < doc.NumPage(); i++ {
-		// scoped variable
+		// scoped var `pageIndex`
 		pageIndex := i
+
 		wg.AddJob(func() {
+			log.Println("Name", sanitizedName, "Page", pageIndex, "Start")
 			client := gosseract.NewClient()
 			defer func() { check(client.Close()) }()
 			client.Languages = []string{"srp", "srp_latn", "eng"}
@@ -79,16 +77,17 @@ func processPdfWithOcr(pdfBuffer []byte, debugUrl string) {
 			text, err := client.Text()
 			check(err)
 			result[pageIndex] = text
+			log.Println("Name", sanitizedName, "Page", pageIndex, "End")
 		})
 	}
 	wg.WaitAll()
+	outputFilePath := filepath.Join(outputDirPath, sanitizedName)
 	f, err := os.Create(outputFilePath)
 	check(err)
 	defer func() { check(f.Close()) }()
 	if _, err := f.WriteString(strings.Join(result, "")); err != nil {
 		panic(err)
 	}
-
 }
 
 //func ocrFromFitzDocument(doc *fitz.Document) <-chan string {
