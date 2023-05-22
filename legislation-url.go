@@ -6,11 +6,17 @@ import (
 	"regexp"
 )
 
+type DocumentUrl struct {
+	url           string
+	kind          string
+	parentMenuUrl string
+}
+
 func fetchDocumentUrls(
 	menuUrls []string,
-	htmlDocumentUrls *[]string,
-	pdfDocumentUrls *[]string,
-	unknownDocumentsFoundInMenuUrls *[]string,
+	htmlDocumentUrls *[]DocumentUrl,
+	pdfDocumentUrls *[]DocumentUrl,
+	unknownDocumentsFoundInMenuUrls *[]DocumentUrl,
 ) {
 
 	uuidRegex := regexp.MustCompile(`'(.*)'`)
@@ -25,12 +31,17 @@ func fetchDocumentUrls(
 
 	// Invalid
 	c.OnHTML(`a`, func(aEl *colly.HTMLElement) {
+		parentMenuUrl := aEl.Request.URL.String()
 		uuidMatch := uuidRegex.FindStringSubmatch(aEl.Attr("ui-sref"))
 		hasHtmlDocumentUuid := uuidMatch != nil
 		if hasHtmlDocumentUuid {
 			htmlDocumentUuid := uuidMatch[1]
 			htmlDocumentUrl := "https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/reg/viewAct/" + htmlDocumentUuid
-			*htmlDocumentUrls = append(*htmlDocumentUrls, htmlDocumentUrl)
+			*htmlDocumentUrls = append(*htmlDocumentUrls, DocumentUrl{
+				url:           htmlDocumentUrl,
+				kind:          "HTML",
+				parentMenuUrl: parentMenuUrl,
+			})
 			return
 		}
 
@@ -38,12 +49,19 @@ func fetchDocumentUrls(
 		isPdfHref := findPdf.MatchString(href)
 		if isPdfHref {
 			pdfDocumentUrl := "https://www.pravno-informacioni-sistem.rs" + href
-			*pdfDocumentUrls = append(*pdfDocumentUrls, pdfDocumentUrl)
+			*pdfDocumentUrls = append(*pdfDocumentUrls, DocumentUrl{
+				url:           pdfDocumentUrl,
+				kind:          "PDF",
+				parentMenuUrl: parentMenuUrl,
+			})
 			return
 		}
 
-		*unknownDocumentsFoundInMenuUrls = append(*unknownDocumentsFoundInMenuUrls, aEl.Request.URL.String())
-
+		*unknownDocumentsFoundInMenuUrls = append(*unknownDocumentsFoundInMenuUrls, DocumentUrl{
+			url:           "",
+			kind:          "UNKNOWN",
+			parentMenuUrl: parentMenuUrl,
+		})
 	})
 
 	c.OnError(func(r *colly.Response, err error) {

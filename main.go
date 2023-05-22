@@ -1,12 +1,12 @@
 package main
 
 import (
+	"encoding/csv"
 	"log"
 	"os"
 	"path"
 	"path/filepath"
 	"strconv"
-	"strings"
 )
 
 // TODO: Show progress for fetching and processing HTML and PDF documents.
@@ -33,19 +33,15 @@ func main() {
 	var menuUrls []string
 	fetchMenuUrls("https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/api/reg/menu", &menuUrls)
 	log.Println("Successfully retrieved the list of " + strconv.Itoa(len(menuUrls)) + " menu URLs.")
-	check(writeIndexToFile(path.Join(indexDirPath, "menu-index.txt"), menuUrls))
 
-	var htmlDocumentUrls []string
-	var pdfDocumentUrls []string
-	var unknownDocumentsFoundInMenuUrls []string
+	var htmlDocumentUrls []DocumentUrl
+	var pdfDocumentUrls []DocumentUrl
+	var unknownDocumentsFoundInMenuUrls []DocumentUrl
 	fetchDocumentUrls(menuUrls, &htmlDocumentUrls, &pdfDocumentUrls, &unknownDocumentsFoundInMenuUrls)
 	log.Println("Found " + strconv.Itoa(len(htmlDocumentUrls)) + " HTML document URLs.")
 	log.Println("Found " + strconv.Itoa(len(pdfDocumentUrls)) + " PDF document URLs.")
 	log.Println("Found " + strconv.Itoa(len(unknownDocumentsFoundInMenuUrls)) + " menu items with UNKNOWN document URLs.")
-
-	check(writeIndexToFile(path.Join(indexDirPath, "html-index.txt"), htmlDocumentUrls))
-	check(writeIndexToFile(path.Join(indexDirPath, "pdf-index.txt"), pdfDocumentUrls))
-	check(writeIndexToFile(path.Join(indexDirPath, "unknown-menu-index.txt"), unknownDocumentsFoundInMenuUrls))
+	check(writeDocumentUrlsToCSV(path.Join(indexDirPath, "document-urls.csv"), append(htmlDocumentUrls, append(pdfDocumentUrls, unknownDocumentsFoundInMenuUrls...)...)))
 
 	//htmlLegislationCollector := *createHtmlLegislationCollector()
 	//pdfLegislationCollector := *createPdfLegislationCollector()
@@ -65,12 +61,19 @@ func main() {
 
 }
 
-func writeIndexToFile(filePath string, urls []string) error {
-	if file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY, 0666); err != nil {
+func writeDocumentUrlsToCSV(csvPath string, urls []DocumentUrl) error {
+	if csvFile, err := os.OpenFile(csvPath, os.O_CREATE|os.O_WRONLY, 0666); err != nil {
 		return err
 	} else {
-		defer file.Close()
-		_, err := file.WriteString(strings.Join(urls, "\n"))
+		defer csvFile.Close()
+		csvWriter := csv.NewWriter(csvFile)
+		rows := [][]string{
+			{"parent_menu_url", "kind", "document_url"},
+		}
+		for _, documentUrl := range urls {
+			rows = append(rows, []string{documentUrl.parentMenuUrl, documentUrl.kind, documentUrl.url})
+		}
+		err = csvWriter.WriteAll(rows)
 		return err
 	}
 }
