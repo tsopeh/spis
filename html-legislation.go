@@ -20,8 +20,8 @@ func createHtmlLegislationCollector(
 ) *colly.Collector {
 
 	bar := pb.New(len(urls))
+	bar.Set("prefix", "HTML")
 	bar.SetMaxWidth(80)
-	bar.SetWriter(os.Stdout)
 	barPool.Add(bar)
 
 	byteOrderMarkReg := regexp.MustCompile("\uFEFF")

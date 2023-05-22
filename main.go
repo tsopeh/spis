@@ -25,10 +25,11 @@ func main() {
 	htmlDocumentUrls, pdfDocumentUrls, _ := fetchOrLoadUrlIndex(path.Join(indexDirPath, "document-urls.csv"))
 
 	barPool, err := pb.StartPool()
+	barPool.Output = os.Stdout
 	check(err)
 
-	htmlCollector := *createHtmlLegislationCollector(htmlDocumentUrls[:10], documentsDirPath, barPool)
-	pdfCollector := *createPdfLegislationCollector(pdfDocumentUrls[:2], documentsDirPath, barPool)
+	htmlCollector := *createHtmlLegislationCollector(htmlDocumentUrls, documentsDirPath, barPool)
+	pdfCollector := *createPdfLegislationCollector(pdfDocumentUrls, documentsDirPath, barPool)
 
 	htmlCollector.Wait()
 	pdfCollector.Wait()

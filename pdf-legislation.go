@@ -23,14 +23,14 @@ func createPdfLegislationCollector(
 ) *colly.Collector {
 
 	documentBar := pb.New(len(urls))
+	documentBar.Set("prefix", "PDF")
 	documentBar.SetMaxWidth(80)
-	documentBar.SetWriter(os.Stdout)
 
-	pdfImageBar := pb.New(1)
-	pdfImageBar.SetMaxWidth(80)
-	pdfImageBar.SetWriter(os.Stdout)
+	pdfPageBar := pb.New(1)
+	pdfPageBar.Set("prefix", "Pages (PDF)")
+	pdfPageBar.SetMaxWidth(80)
 
-	barPool.Add(documentBar, pdfImageBar)
+	barPool.Add(documentBar, pdfPageBar)
 
 	c := colly.NewCollector()
 
@@ -44,7 +44,7 @@ func createPdfLegislationCollector(
 	})
 
 	c.OnResponse(func(response *colly.Response) {
-		processPdfWithOcr(response.Body, documentsDirPath, pdfImageBar)
+		processPdfWithOcr(response.Body, documentsDirPath, pdfPageBar)
 	})
 
 	c.OnScraped(func(response *colly.Response) {
@@ -92,7 +92,8 @@ func processPdfWithOcr(
 		wg.AddJob(func() {
 			client := gosseract.NewClient()
 			defer func() { check(client.Close()) }()
-			//check(client.DisableOutput())
+			// Disable debug log messages.
+			check(client.DisableOutput())
 			client.Languages = []string{"srp", "srp_latn", "eng"}
 			// Page seg mode: 0=osd only, 1=auto+osd, 2=auto, 3=col, 4=block," " 5=line, 6=word, 7=char
 			check(client.SetVariable("tessedit_pageseg_mode", "1"))
@@ -111,7 +112,7 @@ func processPdfWithOcr(
 		})
 	}
 	wg.WaitAll()
-	bar.Finish()
+	// bar.Finish() // TODO: Check if it's fine to finish this? Can it be started again after finishing?
 	outputFilePath := filepath.Join(documentsDirPath, sanitizedName)
 	f, err := os.Create(outputFilePath)
 	check(err)

@@ -21,7 +21,7 @@ func fetchDocumentUrls(
 ) {
 
 	log.Println("Processing menu items")
-	bar := pb.StartNew(len(menuUrls))
+	bar := pb.New(len(menuUrls))
 	bar.SetMaxWidth(80)
 
 	uuidRegex := regexp.MustCompile(`'(.*)'`)
