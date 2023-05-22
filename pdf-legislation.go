@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
+	"github.com/cheggaaa/pb/v3"
 	"github.com/gen2brain/go-fitz"
 	"github.com/gocolly/colly/v2"
 	"github.com/otiai10/gosseract/v2"
 	"image/png"
-	"log"
 	"math"
 	"os"
 	"path/filepath"
@@ -17,8 +17,21 @@ import (
 )
 
 func createPdfLegislationCollector(
+	urls []DocumentUrl,
 	documentsDirPath string,
+	barPool *pb.Pool,
 ) *colly.Collector {
+
+	documentBar := pb.New(len(urls))
+	documentBar.SetMaxWidth(80)
+	documentBar.SetWriter(os.Stdout)
+
+	pdfImageBar := pb.New(1)
+	pdfImageBar.SetMaxWidth(80)
+	pdfImageBar.SetWriter(os.Stdout)
+
+	barPool.Add(documentBar, pdfImageBar)
+
 	c := colly.NewCollector()
 
 	// Example of the request headers needed to fetch a PDF.
@@ -31,8 +44,16 @@ func createPdfLegislationCollector(
 	})
 
 	c.OnResponse(func(response *colly.Response) {
-		processPdfWithOcr(response.Body, documentsDirPath, response.Request.URL.String())
+		processPdfWithOcr(response.Body, documentsDirPath, pdfImageBar)
 	})
+
+	c.OnScraped(func(response *colly.Response) {
+		documentBar.Increment()
+	})
+
+	for _, url := range urls {
+		c.Visit(url.url)
+	}
 
 	return c
 }
@@ -40,7 +61,7 @@ func createPdfLegislationCollector(
 func processPdfWithOcr(
 	pdfBuffer []byte,
 	documentsDirPath string,
-	debugUrl string,
+	bar *pb.ProgressBar,
 ) {
 	doc, err := fitz.NewFromMemory(pdfBuffer)
 	check(err)
@@ -56,19 +77,22 @@ func processPdfWithOcr(
 	var hashString = hex.EncodeToString(hash[:])
 	sanitizedName = sanitizedName + "---" + "PDF" + "---" + hashString + ".txt"
 
-	result := make([]string, doc.NumPage())
+	pageCount := doc.NumPage()
+	result := make([]string, pageCount)
 	poolSize := int(math.Max(1, math.Ceil(0.7*float64(runtime.NumCPU()))))
 	wg := CreateSemaphoredWaitGroup(poolSize)
 
-	log.Println("Name", sanitizedName, "URL", debugUrl)
-	for i := 0; i < doc.NumPage(); i++ {
+	bar.SetTotal(int64(pageCount))
+	bar.SetCurrent(0)
+
+	for i := 0; i < pageCount; i++ {
 		// scoped var `pageIndex`
 		pageIndex := i
 
 		wg.AddJob(func() {
-			log.Println("Name", sanitizedName, "Page", pageIndex, "Start")
 			client := gosseract.NewClient()
 			defer func() { check(client.Close()) }()
+			//check(client.DisableOutput())
 			client.Languages = []string{"srp", "srp_latn", "eng"}
 			// Page seg mode: 0=osd only, 1=auto+osd, 2=auto, 3=col, 4=block," " 5=line, 6=word, 7=char
 			check(client.SetVariable("tessedit_pageseg_mode", "1"))
@@ -83,10 +107,11 @@ func processPdfWithOcr(
 			text, err := client.Text()
 			check(err)
 			result[pageIndex] = text
-			log.Println("Name", sanitizedName, "Page", pageIndex, "End")
+			bar.Increment()
 		})
 	}
 	wg.WaitAll()
+	bar.Finish()
 	outputFilePath := filepath.Join(documentsDirPath, sanitizedName)
 	f, err := os.Create(outputFilePath)
 	check(err)
@@ -95,7 +120,3 @@ func processPdfWithOcr(
 		panic(err)
 	}
 }
-
-//func ocrFromFitzDocument(doc *fitz.Document) <-chan string {
-//	textChan := make(chan string)
-//}

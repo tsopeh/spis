@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/cheggaaa/pb/v3"
 	"github.com/gocolly/colly/v2"
 	"log"
 	"regexp"
@@ -18,6 +19,10 @@ func fetchDocumentUrls(
 	pdfDocumentUrls *[]DocumentUrl,
 	unknownDocumentsFoundInMenuUrls *[]DocumentUrl,
 ) {
+
+	log.Println("Processing menu items")
+	bar := pb.StartNew(len(menuUrls))
+	bar.SetMaxWidth(80)
 
 	uuidRegex := regexp.MustCompile(`'(.*)'`)
 	findPdf := regexp.MustCompile(`findpdfurl=true`)
@@ -70,5 +75,7 @@ func fetchDocumentUrls(
 
 	for _, url := range menuUrls {
 		c.Visit(url)
+		bar.Increment()
 	}
+	bar.Finish()
 }
