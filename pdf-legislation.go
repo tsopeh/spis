@@ -19,6 +19,7 @@ import (
 func createPdfLegislationCollector(
 	urls []DocumentUrl,
 	documentsDirPath string,
+	cache *ScraperCache,
 	barPool *pb.Pool,
 ) *colly.Collector {
 
@@ -37,6 +38,11 @@ func createPdfLegislationCollector(
 	// Example of the request headers needed to fetch a PDF.
 	// curl 'https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/viewdoc?regactid=413504&doctype=reg&findpdfurl=true'   -H 'X-Referer: /SlGlasnikPortal/pdfjs/build/pdf.worker.js'   -H 'Referer: https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/pdfjs/build/pdf.worker.js'   -H 'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36'   --compressed --output - > test.pdf
 	c.OnRequest(func(request *colly.Request) {
+		if _, ok := cache.Get(request.URL.String()); ok {
+			documentBar.Increment()
+			request.Abort()
+		}
+		request.Ctx.Put("requestUrl", request.URL.String())
 		request.Headers.Add("X-Referer", "/SlGlasnikPortal/pdfjs/build/pdf.worker.js")
 		request.Headers.Add("Referer", "https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/pdfjs/build/pdf.worker.js")
 		request.Headers.Add("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36")
@@ -44,10 +50,7 @@ func createPdfLegislationCollector(
 	})
 
 	c.OnResponse(func(response *colly.Response) {
-		processPdfWithOcr(response.Body, documentsDirPath, pdfPageBar)
-	})
-
-	c.OnScraped(func(response *colly.Response) {
+		processPdfWithOcr(response.Body, documentsDirPath, response, cache, pdfPageBar)
 		documentBar.Increment()
 	})
 
@@ -61,6 +64,8 @@ func createPdfLegislationCollector(
 func processPdfWithOcr(
 	pdfBuffer []byte,
 	documentsDirPath string,
+	response *colly.Response,
+	cache *ScraperCache,
 	bar *pb.ProgressBar,
 ) {
 	doc, err := fitz.NewFromMemory(pdfBuffer)
@@ -112,7 +117,6 @@ func processPdfWithOcr(
 		})
 	}
 	wg.WaitAll()
-	// bar.Finish() // TODO: Check if it's fine to finish this? Can it be started again after finishing?
 	outputFilePath := filepath.Join(documentsDirPath, sanitizedName)
 	f, err := os.Create(outputFilePath)
 	check(err)
@@ -120,4 +124,11 @@ func processPdfWithOcr(
 	if _, err := f.WriteString(strings.Join(result, "")); err != nil {
 		panic(err)
 	}
+	cache.Add(FinishedDocument{
+		requestUrl:  response.Ctx.Get("requestUrl"),
+		responseUrl: response.Request.URL.String(),
+		title:       pdfTitle,
+		fileName:    sanitizedName,
+		contentHash: hashString,
+	})
 }

@@ -16,6 +16,7 @@ import (
 func createHtmlLegislationCollector(
 	urls []DocumentUrl,
 	documentsDirPath string,
+	cache *ScraperCache,
 	barPool *pb.Pool,
 ) *colly.Collector {
 
@@ -33,6 +34,14 @@ func createHtmlLegislationCollector(
 	)
 	c.SetRequestTimeout(time.Duration(60) * time.Second)
 	c.Limit(&colly.LimitRule{Delay: 50 * time.Millisecond, RandomDelay: 50 * time.Millisecond, Parallelism: 8, DomainGlob: "*"})
+
+	c.OnRequest(func(request *colly.Request) {
+		if _, ok := cache.Get(request.URL.String()); ok {
+			request.Abort()
+			bar.Increment()
+		}
+		request.Ctx.Put("requestUrl", request.URL.String())
+	})
 
 	c.OnHTML(`html`, func(h *colly.HTMLElement) {
 		var contentEl = h.DOM.Find("#actContentPrimaryScroll")
@@ -69,14 +78,18 @@ func createHtmlLegislationCollector(
 		if _, err := f.WriteString(text); err != nil {
 			panic(err)
 		}
+		cache.Add(FinishedDocument{
+			requestUrl:  h.Request.Ctx.Get("requestUrl"),
+			responseUrl: h.Request.URL.String(),
+			title:       pageTitle,
+			fileName:    sanitizedName,
+			contentHash: hashString,
+		})
+		bar.Increment()
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
 		log.Println("Error in `createHtmlLegislationCollector` for URL", r.Request.URL.String(), err)
-	})
-
-	c.OnScraped(func(response *colly.Response) {
-		bar.Increment()
 	})
 
 	for _, url := range urls {
