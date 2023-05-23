@@ -72,7 +72,7 @@ func processPdfWithOcr(
 	check(err)
 	defer func() { check(doc.Close()) }()
 
-	pdfTitle := doc.Metadata()["title"]
+	pdfTitle := strings.TrimSpace(strings.ReplaceAll(doc.Metadata()["title"], "\u0000", ""))
 	var hash = md5.Sum(pdfBuffer)
 	var sanitizedName = colly.SanitizeFileName(pdfTitle)
 	var fileNameMaxLength = 20

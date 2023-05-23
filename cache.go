@@ -92,18 +92,22 @@ type FinishedDocument struct {
 func createOrLoadScraperCache(
 	cacheFilePath string,
 ) ScraperCache {
-	sem := sync.RWMutex{}
+
 	memCache := make(map[string]FinishedDocument)
-	var fileCache *os.File
-	var shouldWriteHeader bool
-	if existingCache, err := os.OpenFile(cacheFilePath, os.O_RDWR|os.O_APPEND, 0666); err != nil {
-		file, err := os.OpenFile(cacheFilePath, os.O_CREATE|os.O_WRONLY, 0666)
-		check(err)
-		fileCache = file
-		shouldWriteHeader = true
+
+	fileCache, err := os.OpenFile(cacheFilePath, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
+	check(err)
+
+	writer := csv.NewWriter(fileCache)
+
+	stats, err := fileCache.Stat()
+	check(err)
+	isFileEmpty := stats.Size() == 0
+	if isFileEmpty {
+		check(writer.Write([]string{"request_url", "response_url", "title", "content_hash", "filename"}))
+		writer.Flush()
 	} else {
-		fileCache = existingCache
-		shouldWriteHeader = false
+		// Read the cache
 		reader := csv.NewReader(fileCache)
 		rows, err := reader.ReadAll()
 		check(err)
@@ -117,16 +121,14 @@ func createOrLoadScraperCache(
 			}
 		}
 	}
-	csvWriter := csv.NewWriter(fileCache)
-	if shouldWriteHeader {
-		check(csvWriter.Write([]string{"request_url", "response_url", "title", "content_hash", "filename"}))
-	}
+
+	sem := sync.RWMutex{}
 	return ScraperCache{
 		Add: func(document FinishedDocument) {
 			sem.Lock()
 			defer sem.Unlock()
-			check(csvWriter.Write([]string{document.requestUrl, document.responseUrl, document.title, document.contentHash, document.fileName}))
-			csvWriter.Flush()
+			check(writer.Write([]string{document.requestUrl, document.responseUrl, document.title, document.contentHash, document.fileName}))
+			writer.Flush()
 			memCache[document.requestUrl] = document
 		},
 		Get: func(requestUrl string) (FinishedDocument, bool) {

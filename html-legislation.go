@@ -60,7 +60,7 @@ func createHtmlLegislationCollector(
 		text = multipleWhitespacesAndNewlines.ReplaceAllString(text, "\n\n")
 		text = strings.TrimSpace(text)
 
-		var pageTitle = h.DOM.Find("title").Text()
+		var pageTitle = strings.TrimSpace(strings.ReplaceAll(h.DOM.Find("title").Text(), "\u0000", ""))
 
 		var hash = md5.Sum([]byte(text))
 		var sanitizedName = colly.SanitizeFileName(pageTitle)
