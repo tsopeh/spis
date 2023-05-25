@@ -29,12 +29,6 @@ func fetchDocumentUrls(
 
 	c := colly.NewCollector()
 
-	// PDF document
-	c.OnHTML(`a[href]`, func(aEl *colly.HTMLElement) {
-
-	})
-
-	// Invalid
 	c.OnHTML(`a`, func(aEl *colly.HTMLElement) {
 		parentMenuUrl := aEl.Request.URL.String()
 		uuidMatch := uuidRegex.FindStringSubmatch(aEl.Attr("ui-sref"))

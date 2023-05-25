@@ -1,4 +1,4 @@
-module tsopeh/ocr
+module tsopeh/spis
 
 go 1.20
 

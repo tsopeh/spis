@@ -44,7 +44,7 @@ func createHtmlLegislationCollector(
 	})
 
 	c.OnHTML(`html`, func(h *colly.HTMLElement) {
-		var contentEl = h.DOM.Find("#actContentPrimaryScroll")
+		contentEl := h.DOM.Find("#actContentPrimaryScroll")
 		contentEl.Find("meta").Remove()
 		contentEl.Find("link").Remove()
 		contentEl.Find("style").Remove()

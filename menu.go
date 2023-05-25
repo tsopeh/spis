@@ -21,7 +21,10 @@ func menuResponseToUrls(items *[]MenuItem) []string {
 	acc := []string{}
 	for _, item := range *items {
 		if item.Children == nil || len(item.Children) == 0 {
-			acc = append(acc, "https://www.pravno-informacioni-sistem.rs/SlGlasnikPortal/RegistarServlet?subareaid="+strconv.Itoa(item.ID))
+			acc = append(acc, "https://www.pravno-informacioni-sistem.rs"+
+				"/SlGlasnikPortal/RegistarServlet?subareaid="+
+				strconv.Itoa(item.ID),
+			)
 		} else {
 			acc = append(acc, menuResponseToUrls(&item.Children)...)
 		}
